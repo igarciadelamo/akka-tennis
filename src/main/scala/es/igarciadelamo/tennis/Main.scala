@@ -1,8 +1,6 @@
 package es.igarciadelamo.tennis
 
 import akka.actor._
-import es.igarciadelamo.tennis.Main.system
-
 
 case class Ball(target: Int)
 case class StartGame(opposite: ActorRef)
@@ -12,8 +10,8 @@ case object StartMatch
 
 class TennisMatch extends Actor with ActorLogging {
 
-  val player1 = system.actorOf(Props(new Player(self)), name = "Agassi")
-  val player2 = system.actorOf(Props(new Player(self)), name = "Sampras")
+  val player1 = context.actorOf(Props(new Player(self)), name = "Agassi")
+  val player2 = context.actorOf(Props(new Player(self)), name = "Sampras")
 
   def receive = {
     case StartMatch =>
@@ -22,7 +20,10 @@ class TennisMatch extends Actor with ActorLogging {
     case w: EndGame =>
       log.info("The winner is " + w.winner.path.name)
       context.stop(self)
+      context.system.terminate()
   }
+
+  override def postStop(): Unit =  log.info(s"Actor TennisMatch is stopped")
 }
 
 
@@ -58,7 +59,7 @@ class Player(tm: ActorRef) extends Actor with ActorLogging {
 
     case m: StartGame =>
       val where = hitTheBall
-      log.info(s"First ball. Ball from $name (from $position) send the ball to $where")
+      log.info(s"First ball. Ball from position $position send to $where")
       m.opposite ! Ball(where)
 
     case b: Ball => thereIsAWinner(b) match {
@@ -66,12 +67,14 @@ class Player(tm: ActorRef) extends Actor with ActorLogging {
       case None => {
         val where = hitTheBall
         val newPosition = b.target
-        log.info(s"Ball from $name (move from $position to $newPosition) send the ball to $where")
+        log.info(s"Move from position $position to $newPosition and send the ball to $where")
         position = newPosition
         sender ! Ball(where)
       }
     }
   }
+
+  override def postStop(): Unit =  log.info(s"Actor $name is stopped")
 }
 
 object Main extends App {
