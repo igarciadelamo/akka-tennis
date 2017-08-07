@@ -3,9 +3,9 @@ package es.igarciadelamo.tennis
 import akka.actor._
 
 case class Ball(target: Int)
-case class StartGame(opposite: ActorRef)
+case class Play(opposite: ActorRef)
 case class EndGame(winner: ActorRef)
-case object StartMatch
+case object StartGame
 
 
 class TennisMatch extends Actor with ActorLogging {
@@ -14,8 +14,8 @@ class TennisMatch extends Actor with ActorLogging {
   val player2 = context.actorOf(Props(new Player(self)), name = "Sampras")
 
   def receive = {
-    case StartMatch =>
-      player1 ! StartGame(player2)
+    case StartGame =>
+      player1 ! Play(player2)
 
     case w: EndGame =>
       log.info("The winner is " + w.winner.path.name)
@@ -57,7 +57,7 @@ class Player(tm: ActorRef) extends Actor with ActorLogging {
 
   def receive = {
 
-    case m: StartGame =>
+    case m: Play =>
       val where = hitTheBall
       log.info(s"First ball. Ball from position $position send to $where")
       m.opposite ! Ball(where)
@@ -81,6 +81,6 @@ object Main extends App {
 
   val system = ActorSystem("TennisMatch")
   val tennisMatch = system.actorOf(Props[TennisMatch], name = "TennisMatch")
-  tennisMatch ! StartMatch
+  tennisMatch ! StartGame
 
 }
